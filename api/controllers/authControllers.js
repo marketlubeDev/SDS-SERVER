@@ -214,7 +214,7 @@ const verifyOtp = catchAsync(async (req, res, next) => {
       content: {
         email: userExists.email,
         name: userExists.name,
-        image: userExists.profilePic,
+        profilePic: userExists.profilePic,
         phone: userExists.phone,
         addresses: userExists.addresses,
       },
