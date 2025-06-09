@@ -11,6 +11,7 @@ import { bannerRouter } from './bannerRoutes.js';
 import { labelRouter } from './labelRoutes.js';
 import { brandRouter } from './brandRoutes.js';
 import { mailRouter} from './mailRoutes.js';
+import { adminRouter } from './adminRoutes.js';
 
 const router = Router();
 
@@ -27,5 +28,6 @@ router.use("/banner",bannerRouter)
 router.use("/label",labelRouter)
 router.use("/brand",brandRouter)
 router.use("/mail",mailRouter)
+router.use("/admin",adminRouter)
 
 export { router as V1Router };

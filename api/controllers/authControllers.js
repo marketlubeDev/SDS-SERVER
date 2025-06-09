@@ -4,8 +4,9 @@ import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/appError.js";
 import User from "../models/userModels.js";
 import Cart from "../models/cartModel.js";
-import { sendToken } from "../utils/token.js";
+import { generateToken, sendToken } from "../utils/token.js";
 import { otpToEmail } from "../utils/otp.js";
+import bcrypt from "bcrypt";
 
 const KEY = process.env.JWT_SECRET;
 const NODE_ENV = process.env.NODE_ENV;
@@ -55,34 +56,70 @@ const verify = catchAsync(async (req, res, next) => {
   });
 });
 
+// const login = catchAsync(async (req, res, next) => {
+//   const { email, role } = req.body;
+
+//   if (!email) return next(new AppError("Please provide email or phone.."));
+
+//   const user = await User.findOne({ email, role });
+//   if (!user) return next(new AppError("User not found", 404));
+//   // if (!user) return signUp(req,res,next);
+
+//   if (!req.body.password) {
+//     //? return proceed to send otp(login with otp)
+//     //TODO:uncomment after_connecting_to_email_service
+//     //checking password is matching or not
+//     // await user.createPasswordResetOtp(email);
+//     // await user.save();
+//     return res.status(200).json({
+//       status: "Success",
+//       message: "Otp has been sended successfully",
+//     });
+//   }
+
+//   //?compare password
+//   const isPasswordMatch = await user.comparePassword(req.body.password);
+//   if (!isPasswordMatch) return next(new AppError("Invalid password", 401));
+
+//   //?send token
+//   // sendToken(user, 201, res);
+
+//   const token = generateToken(user._id);
+
+
+//   return res.status(200).json({
+//     status: "Success",
+//     message: "Successfully logged in",
+//     content: user,
+//     token,
+//   });
+// });
+
 const login = catchAsync(async (req, res, next) => {
-  const { email, role } = req.body;
+  const { email } = req.body;
 
-  if (!email) return next(new AppError("Please provide email or phone.."));
+  const [response, status, otp] = await otpToEmail(email);
 
-  const user = await User.findOne({ email, role });
-  if (!user) return next(new AppError("User not found", 404));
-  // if (!user) return signUp(req,res,next);
+ 
 
-  if (!req.body.password) {
-    //? return proceed to send otp(login with otp)
-    //TODO:uncomment after_connecting_to_email_service
-    //checking password is matching or not
-    // await user.createPasswordResetOtp(email);
-    // await user.save();
-    return res.status(200).json({
-      status: "Success",
-      message: "Otp has been sended successfully",
+    otpStore.set(email, {
+      otp,
+      expires: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
+      userData: req.body, // Store the user data temporarily
     });
-  }
 
-  //?compare password
-  const isPasswordMatch = await user.comparePassword(req.body.password);
-  if (!isPasswordMatch) return next(new AppError("Invalid password", 401));
 
-  //?send token
-  sendToken(user, 201, res);
-});
+
+  res.status(200).json({
+    status: "Success",
+    message: "OTP has been sent successfully to your email",
+    content: {
+      email,
+    },
+  });
+  
+})
+
 
 const signUp = catchAsync(async (req, res, next) => {
   const { email, name, phone } = req.body;
@@ -149,24 +186,52 @@ const verifyOtp = catchAsync(async (req, res, next) => {
   }
 
   // Create new user with stored data
-  const newUser = new User(storedOtpData.userData);
-  if (!newUser) {
-    return next(new AppError("Failed to create user", 500));
+  const userExists = await User.findOne({ email });
+
+  if(!userExists){
+    const newUser = new User(storedOtpData.userData);
+    if (!newUser) {
+      return next(new AppError("Failed to create user", 500));
+    }
+    const savedUser = await newUser.save();
+    const newUserCart = await Cart.create({
+      user: savedUser._id,
+      products: [],
+    });
+
+    const token = generateToken(savedUser._id);
+    res.status(200).json({
+    status: "Success",
+    message: "User created successfully",
+    content: {
+    email,
+    },
+    });
+  }else{
+    const token = generateToken(userExists._id);
+    res.status(200).json({
+      status: "Success",
+      content: {
+        email: userExists.email,
+        name: userExists.name,
+        image: userExists.profilePic,
+        phone: userExists.phone,
+        addresses: userExists.addresses,
+      },
+      token,
+    });
   }
 
-  const savedUser = await newUser.save();
+  // const savedUser = await newUser.save();
   // Create cart for the user
-  const newUserCart = await Cart.create({
-    user: savedUser._id,
-    products: [],
-  });
+
 
   // Save user
 
   // Clear OTP after successful verification
-  otpStore.delete(email);
+  // otpStore.delete(email);
 
-  sendToken(newUser, 201, res);
+  // sendToken(newUser, 201, res);
 });
 
 const resendOtp = catchAsync(async (req, res, next) => {
@@ -252,6 +317,31 @@ const verifyOtpAndResetPassword = catchAsync(async (req, res, next) => {
   });
 });
 
+const adminLogin = catchAsync(async (req, res, next) => {
+  const { email, password } = req.body;
+
+
+  const admin = await User.findOne({ email, role: "admin" });
+
+  if (!admin) return next(new AppError("Admin not found", 404));
+
+  // const isPasswordMatch = await admin.comparePassword(password );
+
+  const isPasswordMatch = await admin.comparePassword(password);
+  if (!isPasswordMatch) return next(new AppError("Invalid password", 401));
+
+  const token = generateToken(admin._id);
+  res.status(200).json({
+    status: "Success",
+    message: "Admin logged in successfully",
+    content: {
+      email: admin.email,
+      name: admin.name,  
+    },
+    token,
+  });
+});
+
 export default {
   signUp,
   logout,
@@ -262,4 +352,5 @@ export default {
   forgotPassword,
   resetPassword,
   verifyOtpAndResetPassword,
+  adminLogin,
 };
