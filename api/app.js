@@ -30,7 +30,7 @@ app.use(
       "http://localhost:5175",
       "https://sds-security-sigma.vercel.app",
       "https://sds-security-admin.vercel.app",
-      "https://securedesign.in",
+      "https://www.securedesign.in",
     ], // Allow both Vite dev servers
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     credentials: true, // If using cookies for authentication
