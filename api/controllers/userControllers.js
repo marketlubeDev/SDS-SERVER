@@ -138,7 +138,7 @@ const addAddress = catchAsync(async (req, res, next) => {
   res.status(200).json({
     status: "Success",
     message: "Address added successfully",
-    content: updatedUser.addresses,
+    content: updatedUser,
   });
 });
 
