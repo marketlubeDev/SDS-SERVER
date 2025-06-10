@@ -187,7 +187,6 @@ const verifyOtp = catchAsync(async (req, res, next) => {
 
   // Create new user with stored data
   const userExists = await User.findOne({ email });
-
   if(!userExists){
     const newUser = new User(storedOtpData.userData);
     if (!newUser) {
