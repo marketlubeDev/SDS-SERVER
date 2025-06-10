@@ -205,6 +205,7 @@ const verifyOtp = catchAsync(async (req, res, next) => {
     content: {
     email,
     },
+    token,
     });
   }else{
     const token = generateToken(userExists._id);
