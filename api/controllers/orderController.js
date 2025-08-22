@@ -84,6 +84,9 @@ const paymentIntent = catchAsync(async (req, res, next) => {
   }
 
   let totalAmount = cart.totalAmount;
+  if (cart.isCouponApplied) {
+    totalAmount = cart.totalAmount - cart.couponApplied.discountAmount;
+  }
   const options = {
     amount: totalAmount * 100,
     currency: "INR",
@@ -108,7 +111,6 @@ const paymentIntent = catchAsync(async (req, res, next) => {
 });
 
 const verifyPayment = catchAsync(async (req, res, next) => {
-
   const {
     razorpay_order_id,
     razorpay_payment_id,
@@ -210,8 +212,6 @@ const verifyPayment = catchAsync(async (req, res, next) => {
     },
   });
 });
-
-
 
 const createOrderCashOnDelivery = catchAsync(async (req, res, next) => {
   const userId = req.user._id;

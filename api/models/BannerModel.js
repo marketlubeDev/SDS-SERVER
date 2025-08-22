@@ -20,7 +20,7 @@ const bannerSchema = new Schema({
   },
   bannerFor: {
     type: String,
-    enum: ["category", "product", "home"],
+    // enum: ["category", "product", "home"],
     // required: [true, "Banner for is required"],
     default: "product",
   },

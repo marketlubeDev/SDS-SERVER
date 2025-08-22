@@ -91,7 +91,7 @@ const getProduct = catchAsync(async (req, res, next) => {
 
   const [product, variants] = await Promise.all([
     Product.findById(id),
-    Variant.find({ product: id }),
+    Variant.find({ product: id, isActive: true }),
   ]);
 
   if (!product || !product.isActive) {
@@ -383,7 +383,8 @@ const updateVariant = catchAsync(async (req, res, next) => {
 const deleteVariant = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-  const variant = await Variant.findByIdAndDelete(id);
+  // const variant = await Variant.findByIdAndDelete(id);
+  const variant = await Variant.findByIdAndUpdate(id, { isActive: false });
   if (!variant) {
     return next(new AppError("No variant found with that ID", 404));
   }

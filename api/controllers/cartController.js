@@ -63,14 +63,6 @@ const addProductToMyCart = catchAsync(async (req, res, next) => {
   }
 
   // Check if the variant is available in stock
-  if (
-    variant.stockQuantity < quantity ||
-    variant.stockStatus === "outOfStock" ||
-    variant.stockQuantity === 0 ||
-    variant.stockQuantity === undefined
-  ) {
-    return next(new AppError("Product is out of stock", 400));
-  }
 
   // Check if the product with the variant already exists in the cart
   const existingProductIndex = cart.products.findIndex(
@@ -78,6 +70,21 @@ const addProductToMyCart = catchAsync(async (req, res, next) => {
       item.product._id.toString() === productId.toString() &&
       item.variant._id.toString() === variantId.toString()
   );
+
+  if (
+    variant.stockStatus === "outOfStock" ||
+    variant.stockQuantity === 0 ||
+    variant.stockQuantity === undefined
+  ) {
+    return next(new AppError("Product is out of stock", 400));
+  }
+
+  if (
+    variant.stockQuantity <
+    (cart.products[existingProductIndex]?.quantity || 0) + quantity
+  ) {
+    return next(new AppError("Product Maximum Quantity Exceeded", 400));
+  }
 
   if (existingProductIndex > -1) {
     // Product with the variant exists, update quantity

@@ -86,7 +86,6 @@ const verify = catchAsync(async (req, res, next) => {
 
 //   const token = generateToken(user._id);
 
-
 //   return res.status(200).json({
 //     status: "Success",
 //     message: "Successfully logged in",
@@ -100,15 +99,11 @@ const login = catchAsync(async (req, res, next) => {
 
   const [response, status, otp] = await otpToEmail(email);
 
- 
-
-    otpStore.set(email, {
-      otp,
-      expires: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
-      userData: req.body, // Store the user data temporarily
-    });
-
-
+  otpStore.set(email, {
+    otp,
+    expires: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
+    userData: req.body, // Store the user data temporarily
+  });
 
   res.status(200).json({
     status: "Success",
@@ -117,9 +112,7 @@ const login = catchAsync(async (req, res, next) => {
       email,
     },
   });
-  
-})
-
+});
 
 const signUp = catchAsync(async (req, res, next) => {
   const { email, name, phone } = req.body;
@@ -187,7 +180,7 @@ const verifyOtp = catchAsync(async (req, res, next) => {
 
   // Create new user with stored data
   const userExists = await User.findOne({ email });
-  if(!userExists){
+  if (!userExists) {
     const newUser = new User(storedOtpData.userData);
     if (!newUser) {
       return next(new AppError("Failed to create user", 500));
@@ -200,14 +193,14 @@ const verifyOtp = catchAsync(async (req, res, next) => {
 
     const token = generateToken(savedUser._id);
     res.status(200).json({
-    status: "Success",
-    message: "User created successfully",
-    content: {
-    email,
-    },
-    token,
+      status: "Success",
+      message: "User created successfully",
+      content: {
+        email,
+      },
+      token,
     });
-  }else{
+  } else {
     const token = generateToken(userExists._id);
     res.status(200).json({
       status: "Success",
@@ -224,7 +217,6 @@ const verifyOtp = catchAsync(async (req, res, next) => {
 
   // const savedUser = await newUser.save();
   // Create cart for the user
-
 
   // Save user
 
@@ -320,7 +312,6 @@ const verifyOtpAndResetPassword = catchAsync(async (req, res, next) => {
 const adminLogin = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
-
   const admin = await User.findOne({ email, role: "admin" });
 
   if (!admin) return next(new AppError("Admin not found", 404));
@@ -336,9 +327,185 @@ const adminLogin = catchAsync(async (req, res, next) => {
     message: "Admin logged in successfully",
     content: {
       email: admin.email,
-      name: admin.name,  
+      name: admin.name,
     },
     token,
+  });
+});
+
+const adminVerifyOtp = catchAsync(async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  const admin = await User.findOne({ email, role: "admin" });
+  if (!admin) {
+    return next(new AppError("Admin not found", 404));
+  }
+
+  // Get stored OTP data
+  const storedOtpData = otpStore.get(email);
+  if (!storedOtpData || !storedOtpData.isAdminReset) {
+    return next(new AppError("No OTP found. Please request a new OTP.", 400));
+  }
+
+  // Check if OTP is expired
+  if (Date.now() > storedOtpData.expires) {
+    otpStore.delete(email); // Clean up expired OTP
+    return next(new AppError("This OTP is expired. Try again.", 401));
+  }
+
+  // Verify OTP
+  if (storedOtpData.otp !== otp) {
+    return next(new AppError("Incorrect OTP. Check your inbox again.", 400));
+  }
+
+  res.status(200).json({
+    status: "Success",
+    message: "OTP verified successfully",
+  });
+});
+
+const adminForgetPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+
+  // if (email !== adminEmail) {
+  //   return next(new AppError("Invalid admin email", 400));
+  // }
+
+  const admin = await User.findOne({ email, role: "admin" });
+  if (!admin) {
+    return next(new AppError("Admin not found", 404));
+  }
+
+  // Send OTP to admin email
+  const [response, status, otp] = await otpToEmail(
+    email,
+    null,
+    "Admin Password Reset OTP"
+  );
+  if (status !== "OK") {
+    return next(new AppError("Failed to send OTP. Please try again.", 500));
+  }
+
+  // Store OTP in memory with expiry
+  otpStore.set(email, {
+    otp,
+    expires: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
+    isAdminReset: true,
+  });
+
+  res.status(200).json({
+    status: "Success",
+    message: "Password reset OTP has been sent successfully to admin email",
+    content: {
+      email,
+    },
+  });
+});
+
+const adminVerifyOtpAndResetPassword = catchAsync(async (req, res, next) => {
+  const { email, otp, newPassword } = req.body;
+
+  const admin = await User.findOne({ email, role: "admin" });
+  if (!admin) {
+    return next(new AppError("Admin not found", 404));
+  }
+
+  // If OTP is provided, verify it
+  if (otp && otp.trim() !== "") {
+    // Get stored OTP data
+    const storedOtpData = otpStore.get(email);
+    if (!storedOtpData || !storedOtpData.isAdminReset) {
+      return next(new AppError("No OTP found. Please request a new OTP.", 400));
+    }
+
+    // Check if OTP is expired
+    if (Date.now() > storedOtpData.expires) {
+      otpStore.delete(email); // Clean up expired OTP
+      return next(new AppError("This OTP is expired. Try again.", 401));
+    }
+
+    // Verify OTP
+    if (storedOtpData.otp !== otp) {
+      return next(new AppError("Incorrect OTP. Check your inbox again.", 400));
+    }
+  } else {
+    // If no OTP provided, check if there's a valid OTP session (already verified)
+    const storedOtpData = otpStore.get(email);
+    if (!storedOtpData || !storedOtpData.isAdminReset) {
+      return next(
+        new AppError(
+          "No valid OTP session found. Please verify OTP first.",
+          400
+        )
+      );
+    }
+
+    // Check if OTP is expired
+    if (Date.now() > storedOtpData.expires) {
+      otpStore.delete(email); // Clean up expired OTP
+      return next(
+        new AppError("OTP session expired. Please request a new OTP.", 401)
+      );
+    }
+  }
+
+  // Validate new password
+  if (!newPassword || newPassword.length < 6) {
+    return next(
+      new AppError("Password must be at least 6 characters long", 400)
+    );
+  }
+
+  // Update admin password
+  admin.password = newPassword;
+  await admin.save();
+
+  // Clear OTP from store
+  otpStore.delete(email);
+
+  res.status(200).json({
+    status: "Success",
+    message: "Password reset successfully",
+  });
+});
+
+const adminResendOtp = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+
+  const admin = await User.findOne({ email, role: "admin" });
+  if (!admin) {
+    return next(new AppError("Admin not found", 404));
+  }
+
+  // Get stored OTP data
+  const storedOtpData = otpStore.get(email);
+  if (!storedOtpData || !storedOtpData.isAdminReset) {
+    return next(new AppError("No OTP found. Please request a new OTP.", 400));
+  }
+
+  // Send new OTP
+  const [response, status, newOtp] = await otpToEmail(
+    email,
+    null,
+    "Admin Password Reset OTP"
+  );
+  if (status !== "OK") {
+    return next(new AppError("Failed to send OTP. Please try again.", 500));
+  }
+
+  // Update stored OTP with new OTP
+  otpStore.set(email, {
+    otp: newOtp,
+    expires: Date.now() + 10 * 60 * 1000, // 10 minutes expiry
+    isAdminReset: true,
+  });
+
+  res.status(200).json({
+    status: "Success",
+    message: "New OTP has been sent successfully to admin email",
+    content: {
+      email,
+    },
   });
 });
 
@@ -353,4 +520,8 @@ export default {
   resetPassword,
   verifyOtpAndResetPassword,
   adminLogin,
+  adminForgetPassword,
+  adminVerifyOtpAndResetPassword,
+  adminResendOtp,
+  adminVerifyOtp,
 };

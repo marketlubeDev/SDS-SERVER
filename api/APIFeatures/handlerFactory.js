@@ -2,11 +2,12 @@ import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/appError.js";
 import APIFeatures from "./APIFeatures.js";
 import { cloudinaryInstance } from "../config/cloudinary.js";
+import { Product } from "../models/productModel.js";
+import SubCategory from "../models/subCategoryModel.js";
 
 const getAll = (Model) => {
   return catchAsync(async (req, res, next) => {
     let filter = {};
-
 
     const features = new APIFeatures(Model, Model.find(filter), req.query);
 
@@ -82,11 +83,29 @@ const createOne = (Model) => {
   });
 };
 
-const updateOne = (Model) => {
+const updateOne = (Model, subCategory = false) => {
   return catchAsync(async (req, res, next) => {
     const { id } = req.params;
 
     const updation = req.body;
+
+    if (subCategory) {
+      const subCategoryDetails = await SubCategory.findById(id);
+      // check it is updating its main category if yes then check if it has products
+      if (
+        subCategoryDetails.category.toString() != updation.category.toString()
+      ) {
+        const products = await Product.find({ subCategory: id });
+        if (products.length > 0) {
+          return next(
+            new AppError(
+              "Subcategory has products So you can't update its main category",
+              400
+            )
+          );
+        }
+      }
+    }
 
     if (req.file) {
       const cloudResponse = await cloudinaryInstance.uploader.upload(
