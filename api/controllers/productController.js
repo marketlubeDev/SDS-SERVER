@@ -134,7 +134,7 @@ const createProduct = async (req, res, next) => {
       new AppError(
         `The SKU: ${existingVariants
           .map((variant) => variant.sku)
-          .join(", ")}  already present in the database`,
+          .join(", ")}  already exists`,
         400
       )
     );
@@ -232,7 +232,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
       new AppError(
         `The SKU: ${existingVariants
           .map((variant) => variant.sku)
-          .join(", ")}  already present in the database`,
+          .join(", ")}  already exists`,
         400
       )
     );
