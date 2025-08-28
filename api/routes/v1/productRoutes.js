@@ -1,6 +1,7 @@
 import express from "express";
 import productController from "../../controllers/productController.js";
-import { upload } from "../../middlewares/multer.js";
+
+import { upload } from "../../middlewares/multerS3.js";
 import { protect } from "../../middlewares/protect.js";
 import { authRole } from "../../middlewares/authRole.js";
 

@@ -17,6 +17,10 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, "Product must have a image"],
     },
+    productBrochure: {
+      type: String,
+      default: null,
+    },
     images: {
       type: [String],
       required: [true, "Product must have at least one image"],
@@ -83,7 +87,6 @@ const productSchema = new mongoose.Schema(
 productSchema.pre(/^find/, function (next) {
   this.populate("label");
   next();
-}
-);
+});
 
 export const Product = mongoose.model("Product", productSchema);

@@ -1,7 +1,7 @@
 import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/appError.js";
 import APIFeatures from "./APIFeatures.js";
-import { cloudinaryInstance } from "../config/cloudinary.js";
+// S3 uploads are handled by multerS3 middleware
 import { Product } from "../models/productModel.js";
 import SubCategory from "../models/subCategoryModel.js";
 
@@ -67,11 +67,9 @@ const getOne = (Model, type = "id") => {
 
 const createOne = (Model) => {
   return catchAsync(async (req, res, next) => {
+    console.log(req.body);
     if (req.file) {
-      const cloudResponse = await cloudinaryInstance.uploader.upload(
-        req.file.path
-      );
-      req.body.image = cloudResponse.secure_url;
+      req.body.image = req.file.location;
     }
 
     const createdData = await Model.create(req.body);
@@ -108,10 +106,7 @@ const updateOne = (Model, subCategory = false) => {
     }
 
     if (req.file) {
-      const cloudResponse = await cloudinaryInstance.uploader.upload(
-        req.file.path
-      );
-      updation.image = cloudResponse.secure_url;
+      updation.image = req.file.location;
     }
 
     const updatedData = await Model.findByIdAndUpdate(id, updation, {

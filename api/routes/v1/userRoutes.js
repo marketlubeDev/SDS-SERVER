@@ -3,7 +3,7 @@ import authControllers from "../../controllers/authControllers.js";
 import userControllers from "../../controllers/userControllers.js";
 import { authRole } from "../../middlewares/authRole.js";
 import { protect } from "../../middlewares/protect.js";
-import { upload } from "../../middlewares/multer.js";
+import { upload } from "../../middlewares/multerS3.js";
 
 const router = express.Router();
 
@@ -16,7 +16,10 @@ router.post("/logout", authControllers.logout);
 router.patch("/verify-otp", authControllers.verifyOtp);
 router.post("/resend-otp", authControllers.resendOtp);
 router.post("/forgot-password", authControllers.forgotPassword);
-router.post("/verify-otp-and-reset-password", authControllers.verifyOtpAndResetPassword);
+router.post(
+  "/verify-otp-and-reset-password",
+  authControllers.verifyOtpAndResetPassword
+);
 router.patch("/reset-password", authControllers.resetPassword);
 // router.patch("/verify-otp/:email/:otp", authControllers.verifyOtp);
 
@@ -27,7 +30,11 @@ router.use(protect);
 router.use(authRole("customer", "admin"));
 //----------------------------------
 router.get("/get-me", userControllers.getMe);
-router.patch("/update-me", upload.single("profilePic"), userControllers.updateMe);
+router.patch(
+  "/update-me",
+  upload.single("profilePic"),
+  userControllers.updateMe
+);
 router.delete("/delete-me", userControllers.deleteMe);
 router.get("/check-user/:role", userControllers.checkUser);
 

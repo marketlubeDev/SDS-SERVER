@@ -1,27 +1,25 @@
-import { cloudinaryInstance } from "../config/cloudinary.js";
+import { uploadToS3 } from "./s3Upload.js";
 
-
-import { Readable } from "stream";
-
-const bufferToStream = (buffer) => {
-    const readable = new Readable();
-    readable.push(buffer);
-    readable.push(null); // Signals the end of the stream
-    return readable;
+/**
+ * Upload buffer to S3 (replaces Cloudinary functionality)
+ * @param {Buffer} buffer - File buffer
+ * @param {string} folder - S3 folder path (default: "SDS/products")
+ * @param {string} originalName - Original filename (default: generated)
+ * @param {string} contentType - MIME type (default: "image/jpeg")
+ * @returns {Promise<string>} - S3 URL
+ */
+const uploadToS3Buffer = async (
+  buffer,
+  folder = "SDS/products",
+  originalName = `image_${Date.now()}.jpg`,
+  contentType = "image/jpeg"
+) => {
+  try {
+    return await uploadToS3(buffer, originalName, folder, contentType);
+  } catch (error) {
+    console.error("Error uploading buffer to S3:", error);
+    throw new Error(`S3 upload failed: ${error.message}`);
+  }
 };
 
-
-
-
-const uploadToCloudinary = (buffer) => {
-    return new Promise((resolve, reject) => {
-        let stream = cloudinaryInstance.uploader.upload_stream({ folder: "sds_security/products" }, (error, result) => {
-            if (error) reject(error);
-            else resolve(result.secure_url);
-        });
-
-        bufferToStream(buffer).pipe(stream); // Using built-in Node.js stream
-    });
-};
-
-export default uploadToCloudinary;
+export default uploadToS3Buffer;
