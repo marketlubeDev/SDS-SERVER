@@ -32,9 +32,19 @@ const updateMe = catchAsync(async (req, res, next) => {
 
   console.log(req.body);
 
+
   if (req.file) {
     updation.profilePic = req.file.location;
   }
+
+
+  if (req.file) {
+    const cloudResponse = await cloudinaryInstance.uploader.upload(
+      req.file.path
+    );
+    updation.profilePic = cloudResponse.secure_url;
+  }
+
 
   const updatedUser = await User.findByIdAndUpdate(userId, updation, {
     new: true,

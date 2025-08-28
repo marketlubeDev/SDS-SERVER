@@ -123,7 +123,24 @@ const createProduct = async (req, res, next) => {
   let productBrochure = "";
   const variantImagesMap = {};
 
-  console.log("req.files", req.files);
+
+  //here we have to find that the variant's sku is already present in the database
+  const existingVariants = await Variant.find({
+    sku: { $in: variants.map((variant) => variant.sku) },
+    isActive: true,
+  });
+  if (existingVariants.length > 0) {
+    //mention the correct sku
+    return next(
+      new AppError(
+        `The SKU: ${existingVariants
+          .map((variant) => variant.sku)
+          .join(", ")}  already exists`,
+        400
+      )
+    );
+  }
+
 
   if (req.files) {
     for (const file of req.files) {
@@ -168,8 +185,6 @@ const createProduct = async (req, res, next) => {
     productBrochure: productBrochure || null,
   });
 
-  console.log(variantImagesMap, "variantImagesMap");
-
   let newVariants = [];
   if (variants && variants.length > 0) {
     newVariants = await Variant.create(
@@ -212,6 +227,34 @@ const updateProduct = catchAsync(async (req, res, next) => {
   const variantImagesMap = {};
 
   //*Handling images and PDFs using S3
+
+  //here we have to find that the variant's sku is already present in the database
+  // Get current product's variant IDs to exclude them from SKU check
+  const currentProductVariants = await Variant.find({
+    product: productId,
+    isActive: true,
+  }).select("_id");
+
+  const currentVariantIds = currentProductVariants.map((v) => v._id);
+
+  const existingVariants = await Variant.find({
+    sku: { $in: variants.map((variant) => variant.sku) },
+    _id: { $nin: currentVariantIds }, // Exclude current product's variants
+    isActive: true,
+  });
+  if (existingVariants.length > 0) {
+    //mention the correct sku
+    return next(
+      new AppError(
+        `The SKU: ${existingVariants
+          .map((variant) => variant.sku)
+          .join(", ")}  already exists`,
+        400
+      )
+    );
+  }
+  //*Handling images using cloudinary
+
   if (req.files) {
     for (const file of req.files) {
       const { fieldname } = file;
