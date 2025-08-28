@@ -69,8 +69,11 @@ const variantSchema = new mongoose.Schema({
   //   title: String,
   //   description: String,
   // },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 });
-
 
 // variantSchema.pre("findOneAndUpdate", async function (next) {
 //   const update = this.getUpdate();

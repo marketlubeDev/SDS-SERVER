@@ -8,6 +8,9 @@ import {
 } from "../APIFeatures/handlerFactory.js";
 import catchAsync from "../utils/catchAsync.js";
 import mongoose from "mongoose";
+import { Product } from "../models/productModel.js";
+import SubCategory from "../models/subCategoryModel.js";
+import AppError from "../utils/appError.js";
 
 // Create a new category
 export const createCategory = createOne(Category);
@@ -39,4 +42,22 @@ export const getCategoryById = getOne(Category);
 export const updateCategory = updateOne(Category);
 
 // Delete a category
-export const deleteCategory = deleteOne(Category);
+export const deleteCategory = catchAsync(async (req, res, next) => {
+  const category = await Category.findById(req.params.id);
+  const products = await Product.find({ category: category._id });
+  const subCategories = await SubCategory.find({ category: category._id });
+  if (products.length > 0) {
+    return next(new AppError("Category has products", 400));
+  }
+  if (subCategories.length > 0) {
+    return next(
+      new AppError("Category has subcategories please delete them first", 400)
+    );
+  }
+  if (!category) {
+    return next(new AppError("Category not found", 404));
+  }
+
+  await category.deleteOne();
+  res.status(204).json({ status: "success", content: null });
+});

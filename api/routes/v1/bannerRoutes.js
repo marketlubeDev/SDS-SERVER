@@ -6,7 +6,7 @@ import {
   updateBanner,
   getBannerById,
 } from "../../controllers/BannerControllers.js";
-import { upload } from "../../middlewares/multer.js";
+import { upload } from "../../middlewares/multerS3.js";
 
 const bannerRouter = Router();
 
@@ -17,6 +17,5 @@ bannerRouter
   .get(getBannerById)
   .delete(deleteBanner)
   .patch(upload.any(), updateBanner);
-
 
 export { bannerRouter };

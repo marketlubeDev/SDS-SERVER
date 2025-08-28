@@ -9,7 +9,7 @@ import {
   updateOne,
   deleteOne,
 } from "../APIFeatures/handlerFactory.js";
-import { cloudinaryInstance } from "../config/cloudinary.js";
+// S3 uploads are handled by multerS3 middleware
 import { get } from "mongoose";
 
 const getMe = catchAsync(async (req, res, next) => {
@@ -25,23 +25,16 @@ const getMe = catchAsync(async (req, res, next) => {
 });
 
 const updateMe = catchAsync(async (req, res, next) => {
-  if (req.body.password || req.body.confirmPassword)
-    return next(
-      new AppError("This is not the route for updating password..", 400)
-    );
-
   //coming from protect middleware
   const userId = req.user._id;
 
   const updation = req.body;
 
-  if (req.file) {
-    const cloudResponse = await cloudinaryInstance.uploader.upload(
-      req.file.path
-    );
-    updation.profilePic = cloudResponse.secure_url;
-  }
+  console.log(req.body);
 
+  if (req.file) {
+    updation.profilePic = req.file.location;
+  }
 
   const updatedUser = await User.findByIdAndUpdate(userId, updation, {
     new: true,
@@ -76,7 +69,6 @@ const deleteMe = catchAsync(async (req, res, next) => {
 
 const getAllUsers = catchAsync(async (req, res, next) => {
   const { name, email } = req.query;
-
 
   // Build the query object
   const query = {};

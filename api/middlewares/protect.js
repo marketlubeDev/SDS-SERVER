@@ -8,13 +8,17 @@ const KEY = process.env.JWT_SECRET;
 export const protect = catchAsync(async (req, res, next) => {
   console.log("🛡️ Protect middleware running on:", req.originalUrl);
 
-
   // 1) Get the token and check its there
   // const token = req.cookies.token;
   let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
     token = req.headers.authorization.split(" ")[1];
   }
+
+  console.log("🔑 Token:", token);
 
   if (!token) return next(new AppError("Please Login to get access..", 401));
 
@@ -22,17 +26,14 @@ export const protect = catchAsync(async (req, res, next) => {
   const decode = jwt.verify(token, KEY); // there is a chance to get error
   if (!decode) return next(new AppError("Please Login to get access..", 401));
 
-
   // 3) Check the user is still exist to make sure
   const currentUser = await User.findById(decode.id);
 
   if (!currentUser)
     return next(new AppError("The User belong to this token is not exist"));
 
-
   // passing the user  to next middleware
   req.user = currentUser;
-
 
   next();
 });

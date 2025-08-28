@@ -184,6 +184,8 @@ class APIFeatures {
     if (this.queryStr.startDate || this.queryStr.endDate) {
       let dateFilter = {};
 
+      let timezone = "Asia/Kolkata";
+
       if (this.queryStr.startDate) {
         // Parse the date string and treat it as local time (IST)
         const startDate = new Date(this.queryStr.startDate);
@@ -192,7 +194,11 @@ class APIFeatures {
           startDate.getFullYear(),
           startDate.getMonth(),
           startDate.getDate(),
-          0, 0, 0, 0
+          0,
+          0,
+          0,
+          0,
+          timezone
         );
       }
 
@@ -204,7 +210,11 @@ class APIFeatures {
           endDate.getFullYear(),
           endDate.getMonth(),
           endDate.getDate(),
-          23, 59, 59, 999
+          23,
+          59,
+          59,
+          999,
+          timezone
         );
       }
 

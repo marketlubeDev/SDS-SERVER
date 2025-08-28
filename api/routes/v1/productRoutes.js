@@ -1,6 +1,9 @@
 import express from "express";
 import productController from "../../controllers/productController.js";
-import { upload } from "../../middlewares/multer.js";
+
+import { upload } from "../../middlewares/multerS3.js";
+import { protect } from "../../middlewares/protect.js";
+import { authRole } from "../../middlewares/authRole.js";
 
 const router = express.Router();
 
@@ -8,19 +11,31 @@ const router = express.Router();
 router
   .route("/")
   .get(productController.getAllProducts)
-  .post(upload.any(), productController.createProduct);
+  .post(
+    protect,
+    authRole("admin"),
+    upload.any(),
+    productController.createProduct
+  );
 
 router.route("/search").get(productController.searchProducts);
 
 router
   .route("/:id")
   .get(productController.getProduct)
-  .patch(upload.any(), productController.updateProduct)
-  .delete(productController.deleteProduct);
+  .patch(
+    protect,
+    authRole("admin"),
+    upload.any(),
+    productController.updateProduct
+  )
+  .delete(protect, authRole("admin"), productController.deleteProduct);
 
 // Variant routes
 router.route("/variant/all-variants").get(productController.getAllVariants);
-router.route("/variant/:productId").post(productController.addVariant);
+router
+  .route("/variant/:productId")
+  .post(protect, authRole("admin"), productController.addVariant);
 
 // router
 //   .route("/variants/:productId")
@@ -30,8 +45,8 @@ router.route("/variant/:productId").post(productController.addVariant);
 router
   .route("/variant/:id")
   .get(productController.getVariant)
-  .patch(productController.updateVariant)
-  .delete(productController.deleteVariant);
+  .patch(protect, authRole("admin"), productController.updateVariant)
+  .delete(protect, authRole("admin"), productController.deleteVariant);
 
 //get product by category
 router.get("/category/:categoryId", productController.getProductByCategory);

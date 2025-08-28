@@ -36,8 +36,8 @@ const cartSchema = new mongoose.Schema(
       default: 0,
       required: true, // Subtotal is required
     },
-    couponAppliedPrice: {
-      type: Number,
+    couponApplied: {
+      type: Object,
     },
     isCouponApplied: {
       type: Boolean,
@@ -129,14 +129,20 @@ cartSchema.pre("save", async function (next) {
 //calculate total amount if the cart is updatedData
 cartSchema.pre("find", async function (next) {
   if (
-    this.isModified("products", "coupon", "isCouponApplied", "couponAppliedPrice", "fittingCharges", "gst", "subtotal")
+    this.isModified(
+      "products",
+      "coupon",
+      "isCouponApplied",
+      "couponAppliedPrice",
+      "fittingCharges",
+      "gst",
+      "subtotal"
+    )
   ) {
     this.calculateTotal();
   }
   next();
 });
-
-
 
 // Populate products, variants, and other references on find
 cartSchema.pre(/^find/, function (next) {
@@ -146,7 +152,8 @@ cartSchema.pre(/^find/, function (next) {
   })
     .populate({
       path: "products.variant",
-      select: "sku color offerPrice grossPrice sellingPrice stockStatus _id", // Populate variant details
+      select:
+        "sku color offerPrice grossPrice sellingPrice stockStatus _id stockQuantity", // Populate variant details
     })
     .populate({
       path: "user",

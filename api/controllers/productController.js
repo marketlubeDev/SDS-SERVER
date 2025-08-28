@@ -9,8 +9,7 @@ import {
 import Variant from "../models/productVariantModel.js";
 import catchAsync from "../utils/catchAsync.js";
 import AppError from "../utils/appError.js";
-import uploadToCloudinary from "../utils/cloudinaryUpload.js";
-import { cloudinaryInstance } from "../config/cloudinary.js";
+// S3 uploads are handled by multerS3 middleware
 import mongoose from "mongoose";
 
 // const getAllProducts = getAll(Product);
@@ -91,7 +90,7 @@ const getProduct = catchAsync(async (req, res, next) => {
 
   const [product, variants] = await Promise.all([
     Product.findById(id),
-    Variant.find({ product: id }),
+    Variant.find({ product: id, isActive: true }),
   ]);
 
   if (!product || !product.isActive) {
@@ -121,30 +120,43 @@ const createProduct = async (req, res, next) => {
 
   // Process uploaded files
   let productImage = "";
+  let productBrochure = "";
   const variantImagesMap = {};
+
+  console.log("req.files", req.files);
 
   if (req.files) {
     for (const file of req.files) {
       const { fieldname } = file;
 
       if (fieldname === "productImage") {
-        const cloudResponse = await cloudinaryInstance.uploader.upload(
-          file.path
-        );
-        productImage = cloudResponse.secure_url;
+        productImage = file.location;
+      } else if (fieldname === "productBrochure") {
+        try {
+          // Validate file type
+          if (file.mimetype !== "application/pdf") {
+            throw new Error("Only PDF files are allowed for brochure");
+          }
+
+          console.log("S3 upload successful:", file.location);
+          productBrochure = file.location;
+        } catch (error) {
+          console.error("PDF upload error:", error);
+          throw new AppError(
+            `Failed to upload PDF brochure: ${error.message}`,
+            400
+          );
+        }
       } else if (fieldname.startsWith("variant_")) {
         const match = fieldname.match(/variant_(\d+)_image_(\d+)/);
 
         if (match) {
           const variantIndex = match[1];
           const imageIndex = parseInt(match[2]);
-          const cloudResponse = await cloudinaryInstance.uploader.upload(
-            file.path
-          );
           if (!variantImagesMap[variantIndex])
             variantImagesMap[variantIndex] = [];
 
-          variantImagesMap[variantIndex][imageIndex] = cloudResponse.secure_url;
+          variantImagesMap[variantIndex][imageIndex] = file.location;
         }
       }
     }
@@ -153,6 +165,7 @@ const createProduct = async (req, res, next) => {
   const newProduct = new Product({
     ...productDetails,
     productImage: productImage,
+    productBrochure: productBrochure || null,
   });
 
   console.log(variantImagesMap, "variantImagesMap");
@@ -195,32 +208,42 @@ const updateProduct = catchAsync(async (req, res, next) => {
 
   // Process uploaded files
   let productImage = "";
+  let productBrochure = "";
   const variantImagesMap = {};
 
-  //*Handling images using cloudinary
+  //*Handling images and PDFs using S3
   if (req.files) {
     for (const file of req.files) {
       const { fieldname } = file;
 
       if (fieldname === "productImage") {
-        const cloudResponse = await cloudinaryInstance.uploader.upload(
-          file.path
-        );
-        productImage = cloudResponse.secure_url;
+        productImage = file.location;
+      } else if (fieldname === "productBrochure") {
+        try {
+          // Validate file type
+          if (file.mimetype !== "application/pdf") {
+            throw new Error("Only PDF files are allowed for brochure");
+          }
+
+          productBrochure = file.location;
+        } catch (error) {
+          console.error("PDF upload error:", error);
+          throw new AppError(
+            `Failed to upload PDF brochure: ${error.message}`,
+            400
+          );
+        }
       } else if (fieldname.startsWith("variant_")) {
         const match = fieldname.match(/variant_(\d+)_image_(\d+)/);
 
         if (match) {
           const variantIndex = match[1];
           const imageIndex = parseInt(match[2]);
-          const cloudResponse = await cloudinaryInstance.uploader.upload(
-            file.path
-          );
 
           if (!variantImagesMap[variantIndex])
             variantImagesMap[variantIndex] = [];
 
-          variantImagesMap[variantIndex][imageIndex] = cloudResponse.secure_url;
+          variantImagesMap[variantIndex][imageIndex] = file.location;
         }
       }
     }
@@ -231,6 +254,7 @@ const updateProduct = catchAsync(async (req, res, next) => {
     {
       ...productDetails,
       productImage: productImage || productDetails.productImage, // Ensure fallback to existing image
+      productBrochure: productBrochure || productDetails.productBrochure, // Ensure fallback to existing brochure
     },
     { new: true }
   );
@@ -383,7 +407,8 @@ const updateVariant = catchAsync(async (req, res, next) => {
 const deleteVariant = catchAsync(async (req, res, next) => {
   const { id } = req.params;
 
-  const variant = await Variant.findByIdAndDelete(id);
+  // const variant = await Variant.findByIdAndDelete(id);
+  const variant = await Variant.findByIdAndUpdate(id, { isActive: false });
   if (!variant) {
     return next(new AppError("No variant found with that ID", 404));
   }

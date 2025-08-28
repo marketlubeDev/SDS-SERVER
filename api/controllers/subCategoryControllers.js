@@ -8,6 +8,8 @@ import {
 } from "../APIFeatures/handlerFactory.js";
 import catchAsync from "../utils/catchAsync.js";
 import mongoose from "mongoose";
+import { Product } from "../models/productModel.js";
+import AppError from "../utils/appError.js";
 
 // Create a new subcategory
 export const createSubCategory = createOne(SubCategory);
@@ -30,7 +32,6 @@ export const getSubCategories = catchAsync(async (req, res, next) => {
     }
   }
 
-
   const subCategories = await SubCategory.find(query);
 
   res.status(200).json({ status: "success", content: subCategories });
@@ -40,10 +41,21 @@ export const getSubCategories = catchAsync(async (req, res, next) => {
 export const getSubCategoryById = getOne(SubCategory);
 
 // Update a subcategory
-export const updateSubCategory = updateOne(SubCategory);
+export const updateSubCategory = updateOne(SubCategory, true);
 
 // Delete a subcategory
-export const deleteSubCategory = deleteOne(SubCategory);
+export const deleteSubCategory = catchAsync(async (req, res, next) => {
+  const subCategory = await SubCategory.findById(req.params.id);
+  if (!subCategory) {
+    return next(new AppError("Subcategory not found", 404));
+  }
+  const products = await Product.find({ subCategory: subCategory._id });
+  if (products.length > 0) {
+    return next(new AppError("Subcategory has products", 400));
+  }
+  await subCategory.deleteOne();
+  res.status(204).json({ status: "success", content: null });
+});
 
 // Get subcategories by category ID
 export const getSubCategoryByCategory = catchAsync(async (req, res, next) => {

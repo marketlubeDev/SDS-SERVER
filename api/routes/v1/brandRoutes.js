@@ -1,4 +1,4 @@
-  import { Router } from "express";
+import { Router } from "express";
 const router = Router();
 import {
   getAllBrands,
@@ -7,8 +7,7 @@ import {
   updateBrand,
   deleteBrand,
 } from "../../controllers/brandControllers.js";
-import { upload } from "../../middlewares/multer.js";
-
+import { upload } from "../../middlewares/multerS3.js";
 
 router.route("/").get(getAllBrands).post(upload.single("image"), createBrand);
 
