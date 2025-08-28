@@ -25,18 +25,10 @@ export const createBanner = catchAsync(async (req, res, next) => {
 
   if (req.files && req.files.length > 0) {
     for (const file of req.files) {
-      if (file.fieldName.startsWith("image")) {
-        const uploadedImage = await cloudinaryInstance.uploader.upload(
-          file.path,
-          { folder: "banners" }
-        );
-        bannerData.image = uploadedImage.secure_url;
-      } else if (file.fieldName.startsWith("mobileImage")) {
-        const uploadedMobileImage = await cloudinaryInstance.uploader.upload(
-          file.path,
-          { folder: "banners" }
-        );
-        bannerData.mobileImage = uploadedMobileImage.secure_url;
+      if (file.fieldname.startsWith("image")) {
+        bannerData.image = file.location;
+      } else if (file.fieldname.startsWith("mobileImage")) {
+        bannerData.mobileImage = file.location;
       }
     }
   }
